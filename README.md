@@ -28,7 +28,7 @@ FROM [dbo].[webtoon_originals]
 ````
 
 *** 
-### Case study questions
+### Questions
 [1. What is the number of originals for each genre in Webtoon and how are their performances?](https://github.com/huongtxdo/SQL-analyzing-Webtoon/blob/main/solution.md#1-what-is-the-number-of-originals-for-each-genre-in-webtoon-and-how-are-their-performances)
 
 [2. What are the top 10 originals in Webtoon excluding those in daily pass?](https://github.com/huongtxdo/SQL-analyzing-Webtoon/blob/main/solution.md#2-what-are-the-top-10-originals-in-webtoon-excluding-those-in-daily-pass)
