@@ -71,14 +71,57 @@ The average rating is quite similar among genres, yet SUPER_HERO is not doing we
 ### 2. What are the top 10 originals in Webtoon excluding those in daily pass?
 We rank originals according to their rating, subscribers, views and likes.
 We exclude daily pass originals because the data is scraped from the website, which show the views and likes as a sum of every episode, while the length (number of episodes) shown is only what available to read on the website (the rest has to be unlocked).
+
+Let's create a rank_table that contains the rating for every originals (excluding daily pass originals)! We will reuse this table later.
 ```sql
-WITH rank_table AS
+WITH temp_table AS
 (SELECT title, title_id, genre,
 		ROW_NUMBER() OVER (ORDER BY rating DESC) AS rating_rank,
 		ROW_NUMBER() OVER (ORDER BY subscribers DESC) AS subs_rank,
 		ROW_NUMBER() OVER (ORDER BY views/length DESC) AS views_rank,
 		ROW_NUMBER() OVER (ORDER BY likes/length DESC) AS likes_rank
-	FROM [webtoon].[dbo].[webtoon_fixed]
+	FROM [dbo].[webtoon_fixed]
+	WHERE daily_pass = 0)
+SELECT * INTO rank_table FROM temp_table
+```
+Now we query to answer the question!
+```sql
+SELECT TOP 10 *,
+	(rating_rank + subs_rank + views_rank + likes_rank) AS sum_rank
+FROM rank_table
+ORDER BY sum_rank
+```
+
+### Output:
+| title_id | title                 | genre   | rating_rank | subs_rank | views_rank | likes_rank | sum_rank |
+|----------|-----------------------|---------|-------------|-----------|------------|------------|----------|
+| 2135     | The Remarried Empress | FANTASY | 13          | 10        | 10         | 4          | 37       |
+| 2154     | Omniscient Reader     | ACTION  | 6           | 16        | 24         | 12         | 58       |
+| 1499     | Castle Swimmer        | FANTASY | 23          | 14        | 17         | 10         | 64       |
+| 95       | Tower of God          | FANTASY | 12          | 6         | 15         | 31         | 64       |
+| 1022     | LUMINE                | FANTASY | 37          | 7         | 9          | 14         | 67       |
+| 1817     | Down To Earth         | ROMANCE | 40          | 8         | 7          | 13         | 68       |
+| 3784     | 7FATES: CHAKHO        | FANTASY | 14          | 29        | 16         | 18         | 77       |
+| 1537     | Cursed Princess Club  | COMEDY  | 39          | 19        | 18         | 15         | 91       |
+| 1798     | Midnight Poppy Land   | ROMANCE | 54          | 15        | 13         | 11         | 93       |
+| 1571     | Eleceed               | ACTION  | 1           | 32        | 34         | 27         | 94       |
+
+### Remarks:
+Half of the top 10 originals are in FANTASY genre. Combined with the information from Question 1, I have 2 assumptions. 
+
+(1) With a significantly higher number of originals in FANTASY, the chances to find a good one are higher as compared to other genres. This is further supported by noticing ROMANCE and ACTION being the runner-up with 2 top 10 originals for each genre; whilst ROMANCE and ACTION are second and third place in term of number of originals.
+
+(2) The overall quality of originals in FANTASY genre is skewed, with some really good ones and many not-so-good ones.
+
+***
+### 3. What are the top 10 originals in Webtoon including those in daily pass?
+With the inclusion of daily pass originals, we only rank rating and subscribers count, not the number of views and likes.
+```sql
+WITH rank_table AS
+(SELECT title, title_id, genre,
+		ROW_NUMBER() OVER (ORDER BY rating DESC) AS rating_rank,
+		ROW_NUMBER() OVER (ORDER BY subscribers DESC) AS subs_rank
+	FROM [dbo].[webtoon_fixed]
 	WHERE daily_pass = 0) 
 SELECT TOP 10 title_id, title, genre, rating_rank, subs_rank, views_rank, likes_rank,
 	(rating_rank + subs_rank + views_rank + likes_rank) AS sum_rank
@@ -86,22 +129,148 @@ FROM rank_table
 ORDER BY sum_rank
 ```
 
+#### Output:
+| title_id | title                 | genre        | rating_rank | subs_rank | sum_rank |
+|----------|-----------------------|--------------|-------------|-----------|----------|
+| 95       | Tower of God          | FANTASY      | 14          | 8         | 22       |
+| 2154     | Omniscient Reader     | ACTION       | 7           | 22        | 29       |
+| 2135     | The Remarried Empress | FANTASY      | 17          | 14        | 31       |
+| 1514     | SAVE ME               | DRAMA        | 12          | 21        | 33       |
+| 1285     | Sweet Home            | THRILLER     | 26          | 10        | 36       |
+| 1621     | Purple Hyacinth       | MYSTERY      | 6           | 38        | 44       |
+| 372      | Wind Breaker          | SPORTS       | 5           | 40        | 45       |
+| 1499     | Castle Swimmer        | FANTASY      | 29          | 19        | 48       |
+| 1571     | Eleceed               | ACTION       | 1           | 47        | 48       |
+| 1262     | Unholy Blood          | SUPERNATURAL | 16          | 33        | 49       |
+
+#### Remarks:
+(to be added)
+
 ***
-### 2. For each genre, what is the top originals excluding those in daily pass?
-Originals are ranked according to their rating, subscribers, views and likes. Originals 
+### 4. For each genre, what is the top originals excluding those in daily pass?
+First, I create
 ```sql
-/* Create a temp_table that contains the ranking for every originals (excluding daily pass originals) */
-WITH rank_table AS
-(SELECT title, title_id, genre,
-		ROW_NUMBER() OVER (ORDER BY rating DESC) AS rating_rank,
-		ROW_NUMBER() OVER (ORDER BY subscribers DESC) AS subs_rank,
-		ROW_NUMBER() OVER (ORDER BY views/length DESC) AS views_rank,
-		ROW_NUMBER() OVER (ORDER BY likes/length DESC) AS likes_rank
-	FROM [webtoon].[dbo].[webtoon_fixed]
-	WHERE daily_pass = 0) 
-SELECT title_id, title, genre,
-	(rating_rank + subs_rank + views_rank + likes_rank) AS sum_rank
-INTO temp_table
-FROM
-	rank_table;
+WITH temp AS 
+	(SELECT title_id, [title], [genre],
+	ROW_NUMBER() OVER (PARTITION BY genre ORDER BY rating_rank + subs_rank + views_rank + likes_rank) AS genre_rank
+	FROM rank_table)
+SELECT genre, title_id, title
+FROM temp
+WHERE genre_rank = 1;
 ```
+
+#### Output: 
+| genre         | title_id | title                           |
+|---------------|----------|---------------------------------|
+| ACTION        | 2154     | Omniscient Reader               |
+| COMEDY        | 1537     | Cursed Princess Club            |
+| DRAMA         | 986      | I Love Yoo                      |
+| FANTASY       | 2135     | The Remarried Empress           |
+| HEARTWARMING  | 2620     | When the Day Comes              |
+| HISTORICAL    | 3671     | Return of the Mad Demon         |
+| HORROR        | 2578     | Everything is Fine              |
+| MYSTERY       | 1621     | Purple Hyacinth                 |
+| ROMANCE       | 1817     | Down To Earth                   |
+| SF            | 1412     | Rebirth                         |
+| SLICE_OF_LIFE | 3180     | Batman: Wayne Family Adventures |
+| SPORTS        | 372      | Wind Breaker                    |
+| SUPER_HERO    | 679      | unOrdinary                      |
+| SUPERNATURAL  | 1697     | I'm the Grim Reaper             |
+| THRILLER      | 2759     | Homesick                        |
+| TIPTOON       | 1963     | Staying Healthy Together        |
+
+***
+### 5. What are the weekday performances of Webtoon so far (including every original regardless of their status)?
+```sql
+SELECT value AS weekday,
+	count(*) AS originals_published,
+	ROUND(AVG(rating),2) AS avg_rating,
+	AVG(subscribers) AS avg_subscribers,
+	AVG(views/length) AS avg_views,
+	AVG(likes/length) AS avg_likes
+FROM [dbo].[webtoon_fixed]
+CROSS APPLY string_split(weekdays, ',')
+GROUP BY value
+```
+
+### Output: 
+| weekday   | originals_published | avg_rating | avg_subscribers | avg_views | avg_likes |
+|-----------|---------------------|------------|-----------------|-----------|-----------|
+| WEDNESDAY | 183                 | 9,35       | 370980          | 1092237   | 91549     |
+| SATURDAY  | 168                 | 9,39       | 377894          | 788955    | 67856     |
+| MONDAY    | 165                 | 9,37       | 411622          | 1064254   | 85045     |
+| SUNDAY    | 171                 | 9,29       | 430437          | 1054164   | 87265     |
+| FRIDAY    | 175                 | 9,4        | 367587          | 828291    | 77914     |
+| THURSDAY  | 170                 | 9,32       | 387146          | 1323782   | 105351    |
+| TUESDAY   | 171                 | 9,31       | 386598          | 892506    | 73418     |
+
+### Remarks:
+SATURDAY seems to be the least exciting day for Webtoon as the average subscribers, views and likes are quite modest as compared to other weekdays. THURSDAY attracts the highest average views and likes, with almost 300,000 
+more views than WEDNESDAY in second place.
+
+Overall, Webtoon has been keeping a similar number of originals published for each weekday. Interestingly, the average rating for each weekday is almost the same.
+
+***
+### 6. What are the weekday performances of ONGOING Webtoon?
+```sql
+SELECT value AS weekday_ongoing,
+	COUNT(*) AS originals_count,
+	ROUND(AVG(rating), 2) AS avg_rating,
+	AVG(subscribers) AS avg_subscribers,
+	AVG(views/length) AS avg_views,
+	AVG(likes/length) AS avg_likes
+FROM [dbo].[webtoon_fixed]
+CROSS APPLY string_split(weekdays, ',')
+WHERE status = 'ONGOING'
+GROUP BY value
+```
+
+#### Output:
+| weekday_ongoing | originals_count | avg_rating | avg_subscribers | avg_views | avg_likes |
+|-----------------|-----------------|------------|-----------------|-----------|-----------|
+| WEDNESDAY       | 55              | 9,45       | 472575          | 318612    | 28072     |
+| SATURDAY        | 55              | 9,52       | 476583          | 370495    | 35261     |
+| MONDAY          | 55              | 9,52       | 382656          | 274657    | 27674     |
+| SUNDAY          | 64              | 9,23       | 578749          | 442743    | 38804     |
+| FRIDAY          | 59              | 9,43       | 515396          | 395562    | 36353     |
+| THURSDAY        | 54              | 9,51       | 563467          | 835493    | 65582     |
+| TUESDAY         | 58              | 9,39       | 509624          | 376298    | 31621     |
+
+#### Remarks:
+SUNDAY has the highest originals that are currently ongoing, however the average rating is the worst among all weekdays. MONDAY is the least exciting day on Webtoon with the least amount of average subscribers, views and likes. 
+
+THURSDAY is again a very busy day on Webtoon with the highest average views that almost double that of the second place.
+
+***
+### 7. Which authors attract the most views?
+Here, I did not calculate the average of subscribers, views and likes but rather the total of them. 
+```sql
+SELECT TOP 10
+	value as author_name,
+	COUNT(*) AS originals_published,
+	ROUND(AVG(rating),2) AS avg_rating,
+	SUM(subscribers) AS total_subscribers,
+	SUM(views) AS total_views,
+	SUM(likes) AS total_likes
+FROM [dbo].[webtoon_fixed]
+CROSS APPLY string_split(authors, ',')
+GROUP BY value
+order by total_views desc
+```
+
+#### Output: 
+| author_name                | originals_published | avg_rating | total_subscribers | total_views | total_likes |
+|----------------------------|---------------------|------------|-------------------|-------------|-------------|
+| Rachel Smythe              | 1                   | 9,7        | 5970676           | 1121117616  | 55367904    |
+| uru-chan                   | 1                   | 9,75       | 5624872           | 1092922415  | 52920191    |
+| SIU                        | 1                   | 9,86       | 3216820           | 1018532519  | 51902659    |
+| Yaongyi                    | 1                   | 9,51       | 7128661           | 914658370   | 48705268    |
+| Yongje Park                | 1                   | 9,69       | 2683666           | 743008133   | 28814309    |
+| fishball                   | 1                   | 9,73       | 2253761           | 725884348   | 59844916    |
+| Taejun Pak                 | 3                   | 9,82       | 3470575           | 652623377   | 47141710    |
+| Merryweather               | 4                   | 9,56       | 3758100           | 650113146   | 55190458    |
+| Leeanne M. Krecic (Mongie) | 1                   | 9,58       | 4768519           | 649163466   | 39990605    |
+| Shen                       | 2                   | 9,73       | 2007073           | 641467028   | 53961746    |
+
+#### Remarks:
+Top 4 authors are very close to each other. Author Yaongyi seems to stand out with a significantly high amount of subscribers that is even higher than the top 1 author Rachel Smythe, while their average rating is the lowest among top 10 authors. Even so, their rating at 9,51 is still very high.
