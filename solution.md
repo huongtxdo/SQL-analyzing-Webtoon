@@ -76,10 +76,10 @@ Let's create a rank_table that contains the rating for every originals (excludin
 ```sql
 WITH temp_table AS
 (SELECT title, title_id, genre,
-		ROW_NUMBER() OVER (ORDER BY rating DESC) AS rating_rank,
-		ROW_NUMBER() OVER (ORDER BY subscribers DESC) AS subs_rank,
-		ROW_NUMBER() OVER (ORDER BY views/length DESC) AS views_rank,
-		ROW_NUMBER() OVER (ORDER BY likes/length DESC) AS likes_rank
+		DENSE_RANK() OVER (ORDER BY rating DESC) AS rating_rank,
+		DENSE_RANK() OVER (ORDER BY subscribers DESC) AS subs_rank,
+		DENSE_RANK() OVER (ORDER BY views/length DESC) AS views_rank,
+		DENSE_RANK() OVER (ORDER BY likes/length DESC) AS likes_rank
 	FROM [dbo].[webtoon_fixed]
 	WHERE daily_pass = 0)
 SELECT * INTO rank_table FROM temp_table
@@ -93,25 +93,25 @@ ORDER BY sum_rank
 ```
 
 ### Output:
-| title_id | title                 | genre   | rating_rank | subs_rank | views_rank | likes_rank | sum_rank |
-|----------|-----------------------|---------|-------------|-----------|------------|------------|----------|
-| 2135     | The Remarried Empress | FANTASY | 13          | 10        | 10         | 4          | 37       |
-| 2154     | Omniscient Reader     | ACTION  | 6           | 16        | 24         | 12         | 58       |
-| 1499     | Castle Swimmer        | FANTASY | 23          | 14        | 17         | 10         | 64       |
-| 95       | Tower of God          | FANTASY | 12          | 6         | 15         | 31         | 64       |
-| 1022     | LUMINE                | FANTASY | 37          | 7         | 9          | 14         | 67       |
-| 1817     | Down To Earth         | ROMANCE | 40          | 8         | 7          | 13         | 68       |
-| 3784     | 7FATES: CHAKHO        | FANTASY | 14          | 29        | 16         | 18         | 77       |
-| 1537     | Cursed Princess Club  | COMEDY  | 39          | 19        | 18         | 15         | 91       |
-| 1798     | Midnight Poppy Land   | ROMANCE | 54          | 15        | 13         | 11         | 93       |
-| 1571     | Eleceed               | ACTION  | 1           | 32        | 34         | 27         | 94       |
+| title                 | title_id | genre      | rating_rank | subs_rank | views_rank | likes_rank | sum_rank |
+|-----------------------|----------|------------|-------------|-----------|------------|------------|----------|
+| Lore Olympus          | 1320     | ROMANCE    | 23          | 2         | 1          | 1          | 27       |
+| unOrdinary            | 679      | SUPER_HERO | 18          | 3         | 3          | 5          | 29       |
+| The Remarried Empress | 2135     | FANTASY    | 7           | 10        | 10         | 4          | 31       |
+| I Love Yoo            | 986      | DRAMA      | 17          | 5         | 6          | 7          | 35       |
+| Down To Earth         | 1817     | ROMANCE    | 12          | 8         | 7          | 13         | 40       |
+| LUMINE                | 1022     | FANTASY    | 11          | 7         | 9          | 14         | 41       |
+| SubZero               | 1468     | ROMANCE    | 15          | 9         | 11         | 9          | 44       |
+| Let's Play            | 1218     | ROMANCE    | 35          | 4         | 4          | 3          | 46       |
+| True Beauty           | 1436     | ROMANCE    | 42          | 1         | 2          | 2          | 47       |
+| Castle Swimmer        | 1499     | FANTASY    | 9           | 14        | 17         | 10         | 50       |
 
 ### Remarks:
-Half of the top 10 originals are in FANTASY genre. Combined with the information from Question 1, I have 2 assumptions. 
+Half of the top 10 originals are in ROMANCE genre, and 3 out of 10 are in FANTASY. SUPER_HERO has 1 in top 10 even with much less originals published. Combined with the information from Question 1, I have 2 assumptions. 
 
-(1) With a significantly higher number of originals in FANTASY, the chances to find a good one are higher as compared to other genres. This is further supported by noticing ROMANCE and ACTION being the runner-up with 2 top 10 originals for each genre; whilst ROMANCE and ACTION are second and third place in term of number of originals.
+(1) With a significantly higher number of originals in FANTASY and ROMANCE, the chances to find a good one are higher as compared to other genres.
 
-(2) The overall quality of originals in FANTASY genre is skewed, with some really good ones and many not-so-good ones.
+(2) With more ROMANCE in top 10, we can assume that the overall quality of originals in FANTASY genre is more skewed than those of ROMANCE, with some really good ones and many not-so-good ones.
 
 ***
 ### 3. What are the top 10 originals in Webtoon including those in daily pass?
@@ -119,29 +119,29 @@ With the inclusion of daily pass originals, we only rank rating and subscribers 
 ```sql
 WITH rank_table AS
 (SELECT title, title_id, genre,
-		ROW_NUMBER() OVER (ORDER BY rating DESC) AS rating_rank,
-		ROW_NUMBER() OVER (ORDER BY subscribers DESC) AS subs_rank
+		DENSE_RANK() OVER (ORDER BY rating DESC) AS rating_rank,
+		DENSE_RANK() OVER (ORDER BY subscribers DESC) AS subs_rank
 	FROM [dbo].[webtoon_fixed]
 	WHERE daily_pass = 0) 
-SELECT TOP 10 title_id, title, genre, rating_rank, subs_rank, views_rank, likes_rank,
-	(rating_rank + subs_rank + views_rank + likes_rank) AS sum_rank
+SELECT TOP 10 title_id, title, genre, rating_rank, subs_rank,
+	(rating_rank + subs_rank) AS sum_rank
 FROM rank_table
 ORDER BY sum_rank
 ```
 
 #### Output:
-| title_id | title                 | genre        | rating_rank | subs_rank | sum_rank |
-|----------|-----------------------|--------------|-------------|-----------|----------|
-| 95       | Tower of God          | FANTASY      | 14          | 8         | 22       |
-| 2154     | Omniscient Reader     | ACTION       | 7           | 22        | 29       |
-| 2135     | The Remarried Empress | FANTASY      | 17          | 14        | 31       |
-| 1514     | SAVE ME               | DRAMA        | 12          | 21        | 33       |
-| 1285     | Sweet Home            | THRILLER     | 26          | 10        | 36       |
-| 1621     | Purple Hyacinth       | MYSTERY      | 6           | 38        | 44       |
-| 372      | Wind Breaker          | SPORTS       | 5           | 40        | 45       |
-| 1499     | Castle Swimmer        | FANTASY      | 29          | 19        | 48       |
-| 1571     | Eleceed               | ACTION       | 1           | 47        | 48       |
-| 1262     | Unholy Blood          | SUPERNATURAL | 16          | 33        | 49       |
+| title_id | title                 | genre      | rating_rank | subs_rank | sum_rank |
+|----------|-----------------------|------------|-------------|-----------|----------|
+| 95       | Tower of God          | FANTASY    | 7           | 6         | 13       |
+| 2135     | The Remarried Empress | FANTASY    | 7           | 10        | 17       |
+| 1022     | LUMINE                | FANTASY    | 11          | 7         | 18       |
+| 1817     | Down To Earth         | ROMANCE    | 12          | 8         | 20       |
+| 2154     | Omniscient Reader     | ACTION     | 4           | 16        | 20       |
+| 679      | unOrdinary            | SUPER_HERO | 18          | 3         | 21       |
+| 986      | I Love Yoo            | DRAMA      | 17          | 5         | 22       |
+| 1499     | Castle Swimmer        | FANTASY    | 9           | 14        | 23       |
+| 1468     | SubZero               | ROMANCE    | 15          | 9         | 24       |
+| 1320     | Lore Olympus          | ROMANCE    | 23          | 2         | 25       |
 
 #### Remarks:
 (to be added)
@@ -151,7 +151,7 @@ ORDER BY sum_rank
 ```sql
 WITH temp AS 
 	(SELECT title_id, [title], [genre],
-	ROW_NUMBER() OVER (PARTITION BY genre ORDER BY rating_rank + subs_rank + views_rank + likes_rank) AS genre_rank
+	DENSE_RANK() OVER (PARTITION BY genre ORDER BY rating_rank + subs_rank + views_rank + likes_rank) AS genre_rank
 	FROM rank_table)
 SELECT genre, title_id, title
 FROM temp
@@ -159,24 +159,24 @@ WHERE genre_rank = 1;
 ```
 
 #### Output: 
-| genre         | title_id | title                           |
-|---------------|----------|---------------------------------|
-| ACTION        | 2154     | Omniscient Reader               |
-| COMEDY        | 1537     | Cursed Princess Club            |
-| DRAMA         | 986      | I Love Yoo                      |
-| FANTASY       | 2135     | The Remarried Empress           |
-| HEARTWARMING  | 2620     | When the Day Comes              |
-| HISTORICAL    | 3671     | Return of the Mad Demon         |
-| HORROR        | 2578     | Everything is Fine              |
-| MYSTERY       | 1621     | Purple Hyacinth                 |
-| ROMANCE       | 1817     | Down To Earth                   |
-| SF            | 1412     | Rebirth                         |
-| SLICE_OF_LIFE | 3180     | Batman: Wayne Family Adventures |
-| SPORTS        | 372      | Wind Breaker                    |
-| SUPER_HERO    | 679      | unOrdinary                      |
-| SUPERNATURAL  | 1697     | I'm the Grim Reaper             |
-| THRILLER      | 2759     | Homesick                        |
-| TIPTOON       | 1963     | Staying Healthy Together        |
+| genre         | title_id | title                    |
+|---------------|----------|--------------------------|
+| ACTION        | 2154     | Omniscient Reader        |
+| COMEDY        | 1438     | Mage & Demon Queen       |
+| DRAMA         | 986      | I Love Yoo               |
+| FANTASY       | 2135     | The Remarried Empress    |
+| HEARTWARMING  | 2620     | When the Day Comes       |
+| HISTORICAL    | 3671     | Return of the Mad Demon  |
+| HORROR        | 2578     | Everything is Fine       |
+| MYSTERY       | 1621     | Purple Hyacinth          |
+| ROMANCE       | 1320     | Lore Olympus             |
+| SF            | 1229     | Eggnoid                  |
+| SLICE_OF_LIFE | 958      | My Giant Nerd Boyfriend  |
+| SPORTS        | 372      | Wind Breaker             |
+| SUPER_HERO    | 679      | unOrdinary               |
+| SUPERNATURAL  | 1697     | I'm the Grim Reaper      |
+| THRILLER      | 2759     | Homesick                 |
+| TIPTOON       | 1963     | Staying Healthy Together |
 
 ***
 ### 5. What are the weekday performances of Webtoon so far (including every original regardless of their status)?
