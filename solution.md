@@ -121,8 +121,7 @@ WITH rank_table AS
 (SELECT title, title_id, genre,
 		DENSE_RANK() OVER (ORDER BY rating DESC) AS rating_rank,
 		DENSE_RANK() OVER (ORDER BY subscribers DESC) AS subs_rank
-	FROM [dbo].[webtoon_fixed]
-	WHERE daily_pass = 0) 
+	FROM [dbo].[webtoon_fixed]) 
 SELECT TOP 10 title_id, title, genre, rating_rank, subs_rank,
 	(rating_rank + subs_rank) AS sum_rank
 FROM rank_table
@@ -132,16 +131,16 @@ ORDER BY sum_rank
 #### Output:
 | title_id | title                 | genre      | rating_rank | subs_rank | sum_rank |
 |----------|-----------------------|------------|-------------|-----------|----------|
-| 95       | Tower of God          | FANTASY    | 7           | 6         | 13       |
-| 2135     | The Remarried Empress | FANTASY    | 7           | 10        | 17       |
-| 1022     | LUMINE                | FANTASY    | 11          | 7         | 18       |
-| 1817     | Down To Earth         | ROMANCE    | 12          | 8         | 20       |
-| 2154     | Omniscient Reader     | ACTION     | 4           | 16        | 20       |
-| 679      | unOrdinary            | SUPER_HERO | 18          | 3         | 21       |
-| 986      | I Love Yoo            | DRAMA      | 17          | 5         | 22       |
-| 1499     | Castle Swimmer        | FANTASY    | 9           | 14        | 23       |
-| 1468     | SubZero               | ROMANCE    | 15          | 9         | 24       |
-| 1320     | Lore Olympus          | ROMANCE    | 23          | 2         | 25       |
+| 95       | Tower of God          | FANTASY    | 8           | 8         | 16       |
+| 1285     | Sweet Home            | THRILLER   | 9           | 10        | 19       |
+| 1022     | LUMINE                | FANTASY    | 12          | 9         | 21       |
+| 679      | unOrdinary            | SUPER_HERO | 19          | 3         | 22       |
+| 1364     | Age Matters           | ROMANCE    | 16          | 6         | 22       |
+| 2135     | The Remarried Empress | FANTASY    | 8           | 14        | 22       |
+| 986      | I Love Yoo            | DRAMA      | 18          | 5         | 23       |
+| 1467     | Freaking Romance      | ROMANCE    | 18          | 7         | 25       |
+| 1817     | Down To Earth         | ROMANCE    | 13          | 12        | 25       |
+| 1320     | Lore Olympus          | ROMANCE    | 24          | 2         | 26       |
 
 #### Remarks:
 (to be added)
